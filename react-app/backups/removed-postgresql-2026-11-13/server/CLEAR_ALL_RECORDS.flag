@@ -1,0 +1,3 @@
+This file tells the portal server to remove all old records (students, payments, test data) the next time it starts.
+A full backup is saved in the backups folder first. Settings, logins, boards, courses and combinations are kept.
+The file renames itself afterwards so this happens only once.

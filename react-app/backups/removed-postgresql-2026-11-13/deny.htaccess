@@ -1,0 +1,2 @@
+# Never serve these folders on the web
+Require all denied

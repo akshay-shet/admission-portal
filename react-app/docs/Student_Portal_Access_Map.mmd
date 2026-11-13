@@ -1,0 +1,81 @@
+%% Student Portal — Owner / Employee access map and approval loops (Mermaid flowchart)
+flowchart TD
+  START([Open the portal]) --> WAIT{Saved login details loaded?}
+  WAIT -- No --> HOLD[Login button shows Connecting… no sign-in with old defaults]
+  HOLD --> WAIT
+  WAIT -- Yes --> TAB{Login type}
+  TAB -- Owner Login --> OCHK{Owner username + password match?}
+  TAB -- Employee Login --> ECHK{Employee username + password match?}
+  OCHK -- No --> ERR[Invalid username or password]
+  ECHK -- No --> ERR
+  ERR --> TAB
+  OCHK -- Yes --> OSES[Owner session]
+  ECHK -- Yes --> ESES[Employee session]
+
+  OSES --> VALID{Session check on every load:<br/>signed-in name belongs to this login type?}
+  ESES --> VALID
+  VALID -- No: tab edited or login changed --> OUT[Signed out → login page]
+  OUT --> TAB
+  VALID -- Yes, Owner --> OHOME[Owner home: Dashboard]
+  VALID -- Yes, Employee --> EHOME[Employee home: All Students]
+
+  subgraph SHARED[Pages both logins can open]
+    direction TB
+    S1[System Map · Enquiries · New Admission · All Students]
+    S2[SSLC · PUC · Degree · PG lists and forms]
+    S3[Student Documents · Examinations]
+    S4[Fee Plans & Installments · Collect Fee · Manage Installments]
+    S5[Payments & Receipts · Pending Fees · Discounts & Refunds]
+    S6[Employees & Roles · Notifications]
+  end
+
+  subgraph OWNERONLY[Owner-only pages — hidden completely from Employee]
+    direction TB
+    O1[Dashboard · Fee Dashboard · Student Fee Accounts]
+    O2[Cash & Bank · Expenses & Vendors · Finance Reports]
+    O3[Approvals · Settings · Audit Logs]
+    O4[Excel tracker full workbook · Customize forms and lists]
+  end
+
+  OHOME --> SHARED
+  OHOME --> OWNERONLY
+  EHOME --> SHARED
+  EHOME -. menu link or typed address .-> BLOCK[Not shown — redirected to All Students]
+  BLOCK -.-> EHOME
+
+  subgraph GUARD[Data guard — checks every save, whatever page it comes from]
+    direction TB
+    G1[Employee cannot write: settings, expenses, cash & bank,<br/>approvals, fee plan prices, audit log]
+    G2[Payments: employee records Paid or Pending only;<br/>cannot verify, reject, change or delete a counted payment]
+    G3[Fee: employee cannot change a student's actual fee<br/>on a payment or a plan — dates and number of installments only]
+    G4[Discounts: employee requests are always Pending;<br/>decided ones are locked]
+    G5[Students with payments can be deleted by the Owner only]
+  end
+  SHARED -- every add / edit / delete --> GUARD
+  GUARD -- allowed --> SAVE[(Saved records)]
+  GUARD -- blocked --> MSG[Red message: Only the owner can …]
+  SAVE --> AUDIT[Audit log: who, Owner or Employee, what]
+
+  subgraph LOOP[Money decisions loop back to the Owner]
+    direction LR
+    L1[Employee: discount on student form<br/>or Request Discount] --> L2[Status Pending<br/>fee not changed yet]
+    L2 --> L3[Owner: Approvals or Discounts & Refunds]
+    L3 -- Approve --> L4[Total fee = Actual fee − Discount<br/>installments reduced, balance updated]
+    L3 -- Reject --> L5[No change to the fee]
+    P1[Employee: payment marked Pending] --> P2[Owner verifies in Payments & Receipts]
+    P2 -- Verify --> P3[Counted: receipt number, balance updated]
+    P2 -- Reject --> P4[Not counted]
+  end
+  SHARED --> L1
+  SHARED --> P1
+  OWNERONLY --> L3
+  OWNERONLY --> P2
+
+  classDef owner fill:#fef3c7,stroke:#d97706,color:#78350f;
+  classDef emp fill:#dcfce7,stroke:#16a34a,color:#14532d;
+  classDef guard fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+  classDef shared fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+  class OSES,OHOME,O1,O2,O3,O4,L3,P2 owner;
+  class ESES,EHOME,L1,P1 emp;
+  class G1,G2,G3,G4,G5,BLOCK,MSG,OUT guard;
+  class S1,S2,S3,S4,S5,S6 shared;
