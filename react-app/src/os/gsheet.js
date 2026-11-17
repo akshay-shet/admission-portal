@@ -22,10 +22,14 @@ export function sheetIdFrom(v) {
 let mcpP = null;
 const getMcp = () => (mcpP ||= (typeof window !== 'undefined' && window.claude?.use ? window.claude.use('mcp').catch(() => null) : Promise.resolve(null)));
 
+const SHEETS_ENDPOINT = typeof window !== 'undefined' && window.location.hostname.endsWith('vercel.app')
+  ? '/api/sheets'
+  : 'https://react-app-sepia-xi.vercel.app/api/sheets';
+
 let apiSheetsP = null;
 const checkApiSheets = async () => {
   if (apiSheetsP) return apiSheetsP;
-  apiSheetsP = fetch('/api/sheets')
+  apiSheetsP = fetch(SHEETS_ENDPOINT)
     .then((r) => r.json())
     .catch(() => ({ configured: false }));
   return apiSheetsP;
@@ -45,8 +49,8 @@ async function call(tool, input) {
     const p = r?.payload;
     return p && typeof p === 'object' && 'content' in p && !Array.isArray(p.content) ? p.content : p;
   }
-  // Vercel serverless /api/sheets endpoint
-  const r = await fetch('/api/sheets', {
+  // Serverless Google Sheets endpoint (works on Vercel and Hostinger)
+  const r = await fetch(SHEETS_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ tool, input }),

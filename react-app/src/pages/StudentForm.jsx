@@ -9,6 +9,7 @@ import { LEVELS, calcAge, nextStudentId, storeUpload, fileUrl, BOARDS, MEDIUMS, 
 import { notify } from '../components/toast.jsx';
 import { feeAccount, programOf, nextNumber } from '../os/data.js';
 import { currentRole } from '../os/permissions.js';
+import { runSync, DEFAULT_SHEET_ID } from '../os/gsheet.js';
 
 /* ---------- field-spec helpers (layouts mirror the original add/edit pages) ---------- */
 const F = (col, label, name, extra = {}) => ({ t: 'f', col, label, name, ...extra });
@@ -306,6 +307,7 @@ export default function StudentForm({ level, id, prefill }) {
       }
       if (!discLocked) await saveFormDiscount(store, level, row, disc, emp ? 'Pending' : 'Approved');
       notify(mode === 'add' ? `Student ${row.student_name || ''} added` : 'Student details updated');
+      setTimeout(() => { runSync(store.data, DEFAULT_SHEET_ID, true); }, 200);
       draft.clear();
       goBack();
     } catch (err) {

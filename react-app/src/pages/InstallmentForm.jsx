@@ -8,6 +8,7 @@ import { notify } from '../components/toast.jsx';
 import Icon from '../components/Icon.jsx';
 import { currentRole, employeeMayChangePayment } from '../os/permissions.js';
 import { allStudents, feeAccount } from '../os/data.js';
+import { runSync, DEFAULT_SHEET_ID } from '../os/gsheet.js';
 
 const MODES = ['Cash', 'UPI', 'Card'];
 
@@ -155,6 +156,7 @@ export default function InstallmentForm({ id, studentId, back }) {
         if (Object.keys(patch).length) await store.update(recTable, rec.id, patch);
       }
       notify(editing ? 'Installment updated' : `Payment of ${fmtINR(row.amount)} saved`);
+      setTimeout(() => { runSync(store.data, DEFAULT_SHEET_ID, true); }, 200);
       draft.clear();
       goBack();
     } catch (err) {
