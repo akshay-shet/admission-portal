@@ -21,15 +21,44 @@ export function sheetIdFrom(v) {
 
 let mcpP = null;
 const getMcp = () => (mcpP ||= (typeof window !== 'undefined' && window.claude?.use ? window.claude.use('mcp').catch(() => null) : Promise.resolve(null)));
-/** true when this view can reach the Google Sheets connector (the hosted portal on claude.ai) */
-export const gsAvailable = async () => !!(await getMcp());
+
+let apiSheetsP = null;
+const checkApiSheets = async () => {
+  if (apiSheetsP) return apiSheetsP;
+  apiSheetsP = fetch('/api/sheets')
+    .then((r) => r.json())
+    .catch(() => ({ configured: false }));
+  return apiSheetsP;
+};
+
+/** true when this view can reach the Google Sheets connector (claude.ai) or server endpoint (/api/sheets) */
+export const gsAvailable = async () => {
+  if (await getMcp()) return true;
+  const s = await checkApiSheets();
+  return !!s?.configured;
+};
 
 async function call(tool, input) {
   const m = await getMcp();
-  if (!m) { const e = new Error('The Google Sheet link works on the hosted portal (claude.ai).'); e.code = 'unavailable'; throw e; }
-  const r = await m.callTool(GS_SERVER, tool, input, { cache: false });
-  const p = r?.payload;
-  return p && typeof p === 'object' && 'content' in p && !Array.isArray(p.content) ? p.content : p;
+  if (m) {
+    const r = await m.callTool(GS_SERVER, tool, input, { cache: false });
+    const p = r?.payload;
+    return p && typeof p === 'object' && 'content' in p && !Array.isArray(p.content) ? p.content : p;
+  }
+  // Vercel serverless /api/sheets endpoint
+  const r = await fetch('/api/sheets', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tool, input }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const err = new Error(data.error || `Google Sheets API error: ${r.status}`);
+    err.code = data.code || 'tool_error';
+    err.status = r.status;
+    throw err;
+  }
+  return data;
 }
 
 /** what to tell the owner for each connector error */

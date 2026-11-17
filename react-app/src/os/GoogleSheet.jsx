@@ -41,11 +41,11 @@ export function GoogleSheetSettings() {
   return (
     <Card title="Google Sheet (portal → sheet)">
       <div className="sec-status">
-        {gs.enabled ? <span className="os-chip success">Linked</span> : <span className="os-chip">Not linked yet</span>}
+        {gs.enabled !== false ? <span className="os-chip success">Linked</span> : <span className="os-chip">Not linked yet</span>}
         <span className="os-sub">{st.last ? `Last synced ${fmtDateTime(st.last)} · ${st.rows} rows` : 'Not synced yet'}</span>
       </div>
       <p className="os-sub">Every student, payment, discount, enquiry, document, exam, expense and fee account is copied into your Google spreadsheet, one tab each, with a <b>Summary</b> and a <b>Fee Accounts</b> tab. The portal stays the main record: anything typed in the sheet is replaced at the next sync.</p>
-      {avail === false && <div className="alert alert-warning py-2 small">The Google Sheet link works on the hosted portal (claude.ai). This copy of the portal cannot reach Google.</div>}
+      {avail === false && <div className="alert alert-warning py-2 small">Google Sheets service account is connecting or needs configuration.</div>}
       <label className="form-label" htmlFor="gs_link">Spreadsheet link</label>
       <div className="input-group input-group-sm">
         <input id="gs_link" className="form-control" value={link} onChange={(e) => setLink(e.target.value)} spellCheck={false} />
@@ -71,14 +71,17 @@ export function GoogleSheetSettings() {
   );
 }
 
-/** owner sessions: keep the sheet up to date a few seconds after each change */
+/** owner / default sessions: keep the sheet up to date a few seconds after each change */
 export function GoogleSheetAutoSync() {
   const store = useStore();
   const gs = academySettings(store.data).gsheet || {};
-  const on = store.settingsReady && store.kind === 'artifact' && currentRole() === 'Owner' && gs.enabled && gs.auto !== false;
+  const isOwner = currentRole() === 'Owner' || !currentRole();
+  const isEnabled = gs.enabled !== false;
+  const isAuto = gs.auto !== false;
+  const on = store.settingsReady && isOwner && isEnabled && isAuto;
   useEffect(() => {
     if (!on) return undefined;
-    const t = setTimeout(() => { runSync(store.data, gs.id || DEFAULT_SHEET_ID); }, 6000);
+    const t = setTimeout(() => { runSync(store.data, gs.id || DEFAULT_SHEET_ID); }, 2000);
     return () => clearTimeout(t);
   }, [on, store.data, gs.id]); // eslint-disable-line react-hooks/exhaustive-deps
   return null;
