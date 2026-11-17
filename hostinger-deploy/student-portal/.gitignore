@@ -1,8 +1,0 @@
-node_modules/
-frontend/node_modules/
-connectivity/config/.env
-connectivity/config/.secret
-connectivity/config/.revoked.json
-connectivity/google-sheets/*.json
-backups/
-*.log
